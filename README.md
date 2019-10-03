@@ -1,11 +1,9 @@
 # Problem kliki
 ## Dane: 
-* t - tablica wierzchołków
-* k - wielkość szukanej kliki 
+* Tab - tablica wierzchołków
+* K - wielkość szukanej kliki 
 ## Modele: 
 ### Wierzchołek: 
-* id
-* x
-* y
-
-
+* Id
+* X - współrzędna x
+* Y - współrzędna Y
