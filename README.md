@@ -1,9 +1,9 @@
 # Problem kliki
 ## Dane: 
-* Tab - tablica wierzchołków
-* K - wielkość szukanej kliki 
+* K - tablica wierzchołków kandydatów do rozwiązania
+* P - tablica wierzchołków z częściowym wynikiem
+
 ## Modele: 
 ### Wierzchołek: 
-* Id
 * X - współrzędna x
 * Y - współrzędna Y
