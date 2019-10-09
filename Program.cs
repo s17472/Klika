@@ -14,11 +14,16 @@ namespace Klika
     {
         static void Main(string[] args)
         {
-            var graph = new Dictionary<Vertex, List<int>>();
+            var graph = new Dictionary<Vertex, List<Vertex>>();
             var result = new List<Vertex>();
 
 
             Console.WriteLine("Hello World!");
+        }
+
+        public static float CheckAnswer(Dictionary<Vertex, List<Vertex>> graph, List<Vertex> answer)
+        {
+            return 1;
         }
     }
 }
