@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -57,11 +57,17 @@ namespace Klika
         }
     } 
 
+    public class Graph
+    {
+        public Dictionary<Vertex, List<Vertex>> Vertices { get; set; }
+        public int[] Cliques { get; }
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
-            var graph = new Dictionary<Vertex, List<Vertex>>();
+            var graph = new Graph();
             var result = new List<Vertex>();
 
             var xd = new AdjacencyMatrix(3);
@@ -72,7 +78,7 @@ namespace Klika
             Console.WriteLine(xd);
         }
 
-        public static float CheckAnswer(Dictionary<Vertex, List<Vertex>> graph, List<Vertex> answer, int cliqueLength)
+        public static float CheckAnswer(Graph graph, List<Vertex> answer)
         {
             return 1;
         }
