@@ -78,12 +78,37 @@ namespace Klika
         }
     }
 
+    public class PotentialClique
+    {
+        public Dictionary<int, List<int>> Vertices { get; set; } = new Dictionary<int, List<int>>();
+        public int Size => Vertices.Count;
+        public double Score { get; set; } = 0.0;
+        public bool IsClique => Score == 1.0;
+        
+        public PotentialClique(Dictionary<int, List<int>> graph)
+        {
+            Vertices = graph;
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            foreach (var vertex in Vertices)
+            {
+                sb.AppendLine($"{vertex.Key} : {string.Join(", ", vertex.Value)}");
+            }
+
+            sb.AppendLine($"IsClique {IsClique} : Score {Score} ");
+
+            return sb.ToString();
+        }
+    }
+    
 
     class Program
     {
         static void Main(string[] args)
         {
-            // var graph = InitGraph();
             // var g2 = LoadGraph();
             // var am = new AdjacencyMatrix(g2);
             // Console.WriteLine(am);
@@ -94,37 +119,58 @@ namespace Klika
             // GradeAnswer(Checker, InitClique4());
             // GradeAnswer(Checker, GenerateClique(10));
 
-            var xd = GetKCombs(InitGraph().Keys, 2);
-
-            
+            var graph = InitGraph();
+            var subGraphs = GenerateSubGraphs(graph);
+            Brute(subGraphs);
+            ReviewRecord(subGraphs);
+        }
+        
+        private static void ReviewRecord(List<PotentialClique> subGraphs)
+        {
+            Console.WriteLine("All cliques in graph: ");
+            subGraphs.Where(x => x.IsClique).ToList().ForEach(Console.WriteLine);
+            var largestClique = subGraphs.OrderByDescending(x => x.Size).FirstOrDefault(x => x.IsClique);
+            Console.WriteLine($"Largest clique size: {largestClique.Size}");
+            Console.WriteLine($"Largest clique: {string.Join(", ", largestClique.Vertices.Keys)}");
         }
 
-        static void Brute(Dictionary<int, List<int>> graph)
+        static List<PotentialClique> GenerateSubGraphs(Dictionary<int, List<int>> graph)
         {
-            var maxPossibleCliqueSize = graph.Count;
-            var maxCliqueSize = 1;
-            
-            for (var i = 2; i <= maxPossibleCliqueSize; i++)
+            var subGraphs = new List<PotentialClique>();
+
+            for (var i = 2; i <= graph.Count; i++)
             {
-                var potentialCliques = GetKCombs(InitGraph().Keys, i);
+                var potentialCliques = GetKCombs(graph.Keys, i);
                 foreach (var clique in potentialCliques)
                 {
-                    Checker(graph.Where(x => clique.Any(x.Key) ))
+                    var subGraph = new PotentialClique(graph.Where(x => clique.Contains(x.Key))
+                        .ToDictionary(x => x.Key, x => x.Value));
+                    subGraphs.Add(subGraph);
                 }
+            }
+
+            return subGraphs;
+        }
+        
+        static void Brute(List<PotentialClique> subGraphs)
+        {
+            foreach (var potentialClique in subGraphs)
+            {
+                potentialClique.Score = Checker(potentialClique.Vertices);
             }
         }
         
-        public static int Checker(Dictionary<int, List<int>> graph)
+        public static double Checker(Dictionary<int, List<int>> graph)
         {
             var verticesIds = graph.Keys.ToArray();
-            var currentScore = 0;
+            var currentScore = 0.0;
 
             foreach (var edges in graph.Values)
             {
                 currentScore += edges.Count(x => verticesIds.Contains(x));
             }
 
-            return currentScore;
+            return currentScore / ((graph.Count - 1) * graph.Count);
         }
 
         private static Dictionary<int, List<int>> LoadGraph(string file = "graph.txt")
@@ -199,6 +245,8 @@ namespace Klika
                 : $"Graph is NOT a clique");
         }
 
+
+        
         private static int GetGraphsPerfectScore(Dictionary<int, List<int>> graph)
         {
             return graph.Keys.Count * (graph.Keys.Count - 1);
@@ -211,7 +259,7 @@ namespace Klika
                 { 0, new List<int>() { 4, 1 } },
                 { 1, new List<int>() { 0, 2, 4 }},
                 { 2, new List<int>() { 3, 1 } },
-                { 3, new List<int>() { 5, 4, 3 }},
+                { 3, new List<int>() { 5, 4, 2 }},
                 { 4, new List<int>() { 3, 0, 1 }},
                 { 5, new List<int>() { 3 }}
             };
