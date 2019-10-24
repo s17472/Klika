@@ -83,20 +83,37 @@ namespace Klika
     {
         static void Main(string[] args)
         {
-            var graph = InitGraph();
-            var g2 = LoadGraph();
-            var am = new AdjacencyMatrix(g2);
-            Console.WriteLine(am);
-            SaveGraph(GenerateClique(4));
-            GradeAnswer(Checker, InitGraph());
-            GradeAnswer(Checker, LoadGraph());
-            GradeAnswer(Checker, InitClique3());
-            GradeAnswer(Checker, InitClique4());
-            GradeAnswer(Checker, GenerateClique(10));
+            // var graph = InitGraph();
+            // var g2 = LoadGraph();
+            // var am = new AdjacencyMatrix(g2);
+            // Console.WriteLine(am);
+            // SaveGraph(GenerateClique(4));
+            // GradeAnswer(Checker, InitGraph());
+            // GradeAnswer(Checker, LoadGraph());
+            // GradeAnswer(Checker, InitClique3());
+            // GradeAnswer(Checker, InitClique4());
+            // GradeAnswer(Checker, GenerateClique(10));
+
+            var xd = GetKCombs(InitGraph().Keys, 2);
+
+            
         }
 
-
-        // 
+        static void Brute(Dictionary<int, List<int>> graph)
+        {
+            var maxPossibleCliqueSize = graph.Count;
+            var maxCliqueSize = 1;
+            
+            for (var i = 2; i <= maxPossibleCliqueSize; i++)
+            {
+                var potentialCliques = GetKCombs(InitGraph().Keys, i);
+                foreach (var clique in potentialCliques)
+                {
+                    Checker(graph.Where(x => clique.Any(x.Key) ))
+                }
+            }
+        }
+        
         public static int Checker(Dictionary<int, List<int>> graph)
         {
             var verticesIds = graph.Keys.ToArray();
@@ -148,6 +165,14 @@ namespace Klika
                 }
 
             }
+        }
+        
+        static IEnumerable<IEnumerable<T>> GetKCombs<T>(IEnumerable<T> list, int length) where T : IComparable
+        {
+            if (length == 1) return list.Select(t => new T[] {t});
+            return  GetKCombs(list, length - 1)
+                .SelectMany(t => list.Where(o => o.CompareTo(t.Last()) > 0),
+                    (t1, t2) => t1.Concat(new T[] {t2}));
         }
 
         private static Dictionary<int, List<int>> GenerateClique(int n)
