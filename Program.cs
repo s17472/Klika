@@ -105,7 +105,7 @@ namespace Klika
     }
     
 
-    class Program
+    public class Program
     {
         static void Main(string[] args)
         {
@@ -120,21 +120,12 @@ namespace Klika
             // GradeAnswer(Checker, GenerateClique(10));
 
             var graph = InitGraph();
-            var subGraphs = GenerateSubGraphs(graph);
+            var subGraphs = GeneratePotentialCliques(graph);
             Brute(subGraphs);
             ReviewRecord(subGraphs);
         }
-        
-        private static void ReviewRecord(List<PotentialClique> subGraphs)
-        {
-            Console.WriteLine("All cliques in graph: ");
-            subGraphs.Where(x => x.IsClique).ToList().ForEach(Console.WriteLine);
-            var largestClique = subGraphs.OrderByDescending(x => x.Size).FirstOrDefault(x => x.IsClique);
-            Console.WriteLine($"Largest clique size: {largestClique.Size}");
-            Console.WriteLine($"Largest clique: {string.Join(", ", largestClique.Vertices.Keys)}");
-        }
 
-        static List<PotentialClique> GenerateSubGraphs(Dictionary<int, List<int>> graph)
+        static List<PotentialClique> GeneratePotentialCliques(Dictionary<int, List<int>> graph)
         {
             var subGraphs = new List<PotentialClique>();
 
@@ -152,7 +143,7 @@ namespace Klika
             return subGraphs;
         }
         
-        static void Brute(List<PotentialClique> subGraphs)
+        private static void Brute(List<PotentialClique> subGraphs)
         {
             foreach (var potentialClique in subGraphs)
             {
@@ -160,7 +151,20 @@ namespace Klika
             }
         }
         
-        public static double Checker(Dictionary<int, List<int>> graph)
+        private static void ReviewRecord(List<PotentialClique> subGraphs)
+        {
+            Console.WriteLine("All cliques in graph: ");
+            subGraphs.Where(x => x.IsClique).ToList().ForEach(Console.WriteLine);
+            var largestClique = subGraphs.OrderByDescending(x => x.Size).FirstOrDefault(x => x.IsClique);
+            Console.WriteLine($"Largest clique size: {largestClique.Size}");
+            Console.WriteLine($"Largest clique: {string.Join(", ", largestClique.Vertices.Keys)}");
+        }
+        
+        //  kod greya
+        // lista sasiadów
+        
+        
+        private static double Checker(Dictionary<int, List<int>> graph)
         {
             var verticesIds = graph.Keys.ToArray();
             var currentScore = 0.0;
@@ -233,19 +237,6 @@ namespace Klika
 
             return grapgh;
         }
-
-        private static void GradeAnswer(Func<Dictionary<int, List<int>>, int> checker, Dictionary<int, List<int>> graph )
-        {
-            var graphsPerfectScore = GetGraphsPerfectScore(graph);
-            var score = checker(graph);
-            Console.WriteLine($"Perfect score: {graphsPerfectScore}");
-            Console.WriteLine($"Score: {score}");
-            Console.WriteLine(score == graphsPerfectScore
-                ? $"Graph is a clique of { score / graph.Keys.Count + 1}"
-                : $"Graph is NOT a clique");
-        }
-
-
         
         private static int GetGraphsPerfectScore(Dictionary<int, List<int>> graph)
         {
@@ -256,12 +247,13 @@ namespace Klika
         {
             return new Dictionary<int, List<int>>()
             {
-                { 0, new List<int>() { 4, 1 } },
-                { 1, new List<int>() { 0, 2, 4 }},
+                { 0, new List<int>() { 4, 1, 6 } },
+                { 1, new List<int>() { 0, 2, 4, 6 }},
                 { 2, new List<int>() { 3, 1 } },
                 { 3, new List<int>() { 5, 4, 2 }},
-                { 4, new List<int>() { 3, 0, 1 }},
-                { 5, new List<int>() { 3 }}
+                { 4, new List<int>() { 3, 0, 1, 6 }},
+                { 5, new List<int>() { 3 }},
+                { 6, new List<int>() { 0, 1, 4 }}
             };
         }
 
