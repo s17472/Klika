@@ -78,14 +78,14 @@ namespace Klika
         }
     }
 
-    public class PotentialClique
+    public class SubGraph
     {
         public Dictionary<int, List<int>> Vertices { get; set; } = new Dictionary<int, List<int>>();
         public int Size => Vertices.Count;
         public double Score { get; set; } = 0.0;
         public bool IsClique => Score == 1.0;
         
-        public PotentialClique(Dictionary<int, List<int>> graph)
+        public SubGraph(Dictionary<int, List<int>> graph)
         {
             Vertices = graph;
         }
@@ -125,16 +125,21 @@ namespace Klika
             ReviewRecord(subGraphs);
         }
 
-        static List<PotentialClique> GeneratePotentialCliques(Dictionary<int, List<int>> graph)
+        static SubGraph NextSubGraph(Dictionary<int, List<int>> graph, SubGraph subGraph)
         {
-            var subGraphs = new List<PotentialClique>();
+            
+        }
+        
+        static List<SubGraph> GeneratePotentialCliques(Dictionary<int, List<int>> graph)
+        {
+            var subGraphs = new List<SubGraph>();
 
             for (var i = 2; i <= graph.Count; i++)
             {
                 var potentialCliques = GetKCombs(graph.Keys, i);
                 foreach (var clique in potentialCliques)
                 {
-                    var subGraph = new PotentialClique(graph.Where(x => clique.Contains(x.Key))
+                    var subGraph = new SubGraph(graph.Where(x => clique.Contains(x.Key))
                         .ToDictionary(x => x.Key, x => x.Value));
                     subGraphs.Add(subGraph);
                 }
@@ -143,7 +148,7 @@ namespace Klika
             return subGraphs;
         }
         
-        private static void Brute(List<PotentialClique> subGraphs)
+        private static void Brute(List<SubGraph> subGraphs)
         {
             foreach (var potentialClique in subGraphs)
             {
@@ -151,7 +156,7 @@ namespace Klika
             }
         }
         
-        private static void ReviewRecord(List<PotentialClique> subGraphs)
+        private static void ReviewRecord(List<SubGraph> subGraphs)
         {
             Console.WriteLine("All cliques in graph: ");
             subGraphs.Where(x => x.IsClique).ToList().ForEach(Console.WriteLine);
