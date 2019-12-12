@@ -1,12 +1,15 @@
 import itertools as it
+from math import factorial
 import matplotlib.pyplot as plt
 import numpy as np
 import random as rm
-
 from xlwings import xrange
+from json import dumps, loads, JSONEncoder, JSONDecoder
+import pickle
 
 
 def goal(s):
+    if not s: return 0
     union = set.union(*s)
     return len(union) - len(s) * 0.1
 
@@ -32,34 +35,92 @@ def brute(s):
     return best_combo
 
 
+def get_nth_combination(s, n):
+    combination_count = get_combination_count(s)
+    if not (0 < n <= combination_count):
+        n = int(n % combination_count)
+        print(f"n is <= 0 or exceeds possible combinations count, n = {n}")
+
+    bin_str = bin(n)[:1:-1]
+    combo = []
+    for i in range(len(bin_str)):
+        if int(bin_str[i]) == 1:
+            combo.append(s[i])
+
+    return combo
+
+
 def get_neighbourhood_full(s, start):
-    return {start-2: goal(s[start-2]), start-1: goal(s[start-1]), start+1: goal(s[start+1]), start+2: goal(s[start+2]) }
+    return {start - 2: goal(get_nth_combination(s, start - 2)),
+            start - 1: goal(get_nth_combination(s, start - 1)),
+            start + 1: goal(get_nth_combination(s, start + 1)),
+            start + 2: goal(get_nth_combination(s, start + 2))}
+
+
+def get_neighbourhood_close(s, start):
+    return {start - 1: goal(get_nth_combination(s, start - 1)),
+            start + 1: goal(get_nth_combination(s, start + 1))}
+
+
+def get_neighbourhood(s, start, n):
+    ret = {}
+    for i in [x for x in range(start-n, start+n+1) if x != start]:
+        ret[i] = goal(get_nth_combination(s, i))
+    return ret
+
+
+def get_combination_count(s):
+    combination_count = 0
+    s_len = len(s)
+    for i in range(s_len):
+        combination_count += factorial(s_len) / (factorial(i) * factorial(s_len - i))
+    return combination_count
 
 
 def hill_full(s, x):
-    combos = get_combinations(s)
-    start = rm.randrange(0, len(c))
-    best_score = 0
-    best_combo = combos[0]
+    rm.seed(5)
+    start = rm.randint(0, get_combination_count(s)+1)
+    start_combo = get_nth_combination(s, start)
+    best_score = goal(start_combo)
+    best_combo = start
 
     for i in range(x):
-        n = get_neighbourhood_full(combos, start)
+        n = get_neighbourhood(s, start, 2)
         best_n_index = max(n, key=n.get)
-        best_n_score = goal(c[best_n_index])
+        best_n_score = n[best_n_index]
         if best_score > best_n_score:
             break
-
         best_score = best_n_score
-        best_combo = c[best_n_index]
+        best_combo = best_n_index
         start = best_n_index
 
-    return [best_combo, best_score]
+    return [get_nth_combination(s, best_combo), best_score]
 
-print("{:08b}".format(5))
-print("{:05b}".format(5))
-print("{:03b}".format(5))
-print("{:02b}".format(5))
-# U = [1, 2, 3, 4, 5]
+
+def hill_random(s, x):
+    rm.seed(5)
+    start = rm.randint(0, get_combination_count(s)+1)
+    start_combo = get_nth_combination(s, start)
+    best_score = goal(start_combo)
+    best_combo = start
+
+    for i in range(x):
+        n = get_neighbourhood(s, start, 1)
+        best_n_index = rm.choice(list(n.keys()))
+        best_n_score = n[best_n_index]
+        if best_score > best_n_score:
+            break
+        best_score = best_n_score
+        best_combo = best_n_index
+        start = best_n_index
+
+    return [get_nth_combination(s, best_combo), best_score]
+
+
 S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}, {1, 2, 3, 4}]
+U = [1, 2, 3, 4, 5]
+print(hill_full(S, 10))
+print(hill_random(S, 10))
+print(dumps(S))
 # c = get_combinations(S)
 # print(hill_full(S, 10))
