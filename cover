@@ -1,0 +1,65 @@
+import itertools as it
+import matplotlib.pyplot as plt
+import numpy as np
+import random as rm
+
+from xlwings import xrange
+
+
+def goal(s):
+    union = set.union(*s)
+    return len(union) - len(s) * 0.1
+
+
+def get_combinations(s):
+    combos = []
+    for i in range(1, len(s) + 1):
+        combos += list(it.combinations(s, i))
+    return combos
+
+
+def brute(s):
+    combos = get_combinations(s)
+    best_score = 0
+    best_combo = combos[0]
+
+    for i in range(len(combos)):
+        score = goal(combos[i])
+        if score > best_score:
+            best_combo = combos[i]
+            best_score = score
+
+    return best_combo
+
+
+def get_neighbourhood_full(s, start):
+    return {start-2: goal(s[start-2]), start-1: goal(s[start-1]), start+1: goal(s[start+1]), start+2: goal(s[start+2]) }
+
+
+def hill_full(s, x):
+    combos = get_combinations(s)
+    start = rm.randrange(0, len(c))
+    best_score = 0
+    best_combo = combos[0]
+
+    for i in range(x):
+        n = get_neighbourhood_full(combos, start)
+        best_n_index = max(n, key=n.get)
+        best_n_score = goal(c[best_n_index])
+        if best_score > best_n_score:
+            break
+
+        best_score = best_n_score
+        best_combo = c[best_n_index]
+        start = best_n_index
+
+    return [best_combo, best_score]
+
+print("{:08b}".format(5))
+print("{:05b}".format(5))
+print("{:03b}".format(5))
+print("{:02b}".format(5))
+# U = [1, 2, 3, 4, 5]
+S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}, {1, 2, 3, 4}]
+# c = get_combinations(S)
+# print(hill_full(S, 10))
