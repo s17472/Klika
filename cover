@@ -4,8 +4,66 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random as rm
 from xlwings import xrange
-from json import dumps, loads, JSONEncoder, JSONDecoder
+import json
+import collections
 import pickle
+
+
+#region Json
+class JSONSetEncoder(json.JSONEncoder):
+    """Use with json.dumps to allow Python sets to be encoded to JSON
+
+    Example
+    -------
+
+    import json
+
+    data = dict(aset=set([1,2,3]))
+
+    encoded = json.dumps(data, cls=JSONSetEncoder)
+    decoded = json.loads(encoded, object_hook=json_as_python_set)
+    assert data == decoded     # Should assert successfully
+
+    Any object that is matched by isinstance(obj, collections.Set) will
+    be encoded, but the decoded value will always be a normal Python set.
+
+    """
+
+    def default(self, obj):
+        if isinstance(obj, collections.Set):
+            return dict(_set_object=list(obj))
+        else:
+            return json.JSONEncoder.default(self, obj)
+
+def json_as_python_set(dct):
+    """Decode json {'_set_object': [1,2,3]} to set([1,2,3])
+
+    Example
+    -------
+    decoded = json.loads(encoded, object_hook=json_as_python_set)
+
+    Also see :class:`JSONSetEncoder`
+
+    """
+    if '_set_object' in dct:
+        return set(dct['_set_object'])
+    return dct
+#endregion
+
+
+seed = 5
+
+
+def save_sets(S):
+    with open("Output.txt", "w") as text_file:
+        serialized = json.dumps(S, cls=JSONSetEncoder)
+        text_file.write(serialized)
+
+
+def load_sets():
+    with open("Output.txt", "r+") as text_file:
+        return json.loads(text_file.read(), object_hook=json_as_python_set)
+
 
 
 def goal(s):
@@ -36,7 +94,7 @@ def brute(s):
 
 
 def get_nth_combination(s, n):
-    combination_count = get_combination_count(s)
+    combination_count = get_combination_count(len(s))
     if not (0 < n <= combination_count):
         n = int(n % combination_count)
         print(f"n is <= 0 or exceeds possible combinations count, n = {n}")
@@ -69,20 +127,20 @@ def get_neighbourhood(s, start, n):
     return ret
 
 
-def get_combination_count(s):
+def get_combination_count(s_len):
     combination_count = 0
-    s_len = len(s)
     for i in range(s_len):
         combination_count += factorial(s_len) / (factorial(i) * factorial(s_len - i))
     return combination_count
 
 
 def hill_full(s, x):
-    rm.seed(5)
-    start = rm.randint(0, get_combination_count(s)+1)
+    rm.seed(seed)
+    start = rm.randint(0, get_combination_count(len(s))+1)
     start_combo = get_nth_combination(s, start)
     best_score = goal(start_combo)
     best_combo = start
+    checked = [best_combo]
 
     for i in range(x):
         n = get_neighbourhood(s, start, 2)
@@ -93,13 +151,14 @@ def hill_full(s, x):
         best_score = best_n_score
         best_combo = best_n_index
         start = best_n_index
+        checked.append(best_combo)
 
     return [get_nth_combination(s, best_combo), best_score]
 
 
 def hill_random(s, x):
-    rm.seed(5)
-    start = rm.randint(0, get_combination_count(s)+1)
+    rm.seed(seed)
+    start = rm.randint(0, get_combination_count(len(s))+1)
     start_combo = get_nth_combination(s, start)
     best_score = goal(start_combo)
     best_combo = start
@@ -117,10 +176,33 @@ def hill_random(s, x):
     return [get_nth_combination(s, best_combo), best_score]
 
 
+def generate_sets(U, S_size):
+    rm.seed(7)
+    combination_count = get_combination_count(len(U))
+    print(combination_count)
+    combos = [rm.randrange(0, combination_count+1) for _ in xrange(S_size)]
+    print(combos)
+    return [set(get_nth_combination(U, i)) for i in combos]
+
+
+
+
 S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}, {1, 2, 3, 4}]
 U = [1, 2, 3, 4, 5]
-print(hill_full(S, 10))
-print(hill_random(S, 10))
-print(dumps(S))
+U2 = xrange(6)
+# print(hill_full(S, 10))
+# print(hill_random(S, 10))
+S2 = generate_sets(U2, 10)
+S3 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}, {2, 3}, {1, 2, 3, 5}, {0, 1, 2}, {0, 1, 3, 4}, {5, 6}]
+print(S3)
+print(hill_full(S3, 10))
+# print(S)
+
+# print(load_sets())
+# S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}, {1, 2, 3, 4}, {55}]
+# save_sets(S)
+# print(load_sets())
 # c = get_combinations(S)
 # print(hill_full(S, 10))
+
+
