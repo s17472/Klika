@@ -51,7 +51,7 @@ def json_as_python_set(dct):
 #endregion
 
 
-seed = 5
+seed = 3555
 
 
 def save_sets(S):
@@ -65,7 +65,6 @@ def load_sets():
         return json.loads(text_file.read(), object_hook=json_as_python_set)
 
 
-
 def goal(s):
     if not s: return 0
     union = set.union(*s)
@@ -77,6 +76,15 @@ def get_combinations(s):
     for i in range(1, len(s) + 1):
         combos += list(it.combinations(s, i))
     return combos
+
+
+def generate_sets(U, S_size):
+    rm.seed(7)
+    combination_count = get_combination_count(len(U))
+    print(combination_count)
+    combos = [rm.randrange(0, combination_count+1) for _ in xrange(S_size)]
+    print(combos)
+    return [set(get_nth_combination(U, i)) for i in combos]
 
 
 def brute(s):
@@ -140,7 +148,7 @@ def hill_full(s, x):
     start_combo = get_nth_combination(s, start)
     best_score = goal(start_combo)
     best_combo = start
-    checked = [best_combo]
+    print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
     for i in range(x):
         n = get_neighbourhood(s, start, 2)
@@ -151,7 +159,7 @@ def hill_full(s, x):
         best_score = best_n_score
         best_combo = best_n_index
         start = best_n_index
-        checked.append(best_combo)
+        print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
     return [get_nth_combination(s, best_combo), best_score]
 
@@ -176,27 +184,46 @@ def hill_random(s, x):
     return [get_nth_combination(s, best_combo), best_score]
 
 
-def generate_sets(U, S_size):
-    rm.seed(7)
-    combination_count = get_combination_count(len(U))
-    print(combination_count)
-    combos = [rm.randrange(0, combination_count+1) for _ in xrange(S_size)]
-    print(combos)
-    return [set(get_nth_combination(U, i)) for i in combos]
+def tabu(s, it, t_MAX):
+    rm.seed(seed)
+    start = rm.randint(0, get_combination_count(len(s)) + 1)
+    start_combo = get_nth_combination(s, start)
+    best_score = goal(start_combo)
+    checked = [start]
+
+    for i in range(it):
+        n = get_neighbourhood(s, start, 2)
+        n_tabu = {key: value for (key, value) in n.items() if key not in checked}
+        if not n_tabu:
+            break
+        best_n_index = max(n_tabu, key=n.get)
+        checked.append(best_n_index)
+        best_n_score = n_tabu[best_n_index]
+        print(f"C: {best_n_index}: {best_n_score}: {get_nth_combination(s, best_n_index)}")
+        start = best_n_index
+        if best_score <= best_n_score:
+            best_score = best_n_score
+            best_index = best_n_index
+        if len(checked) >= t_MAX:
+            break
+        print(f"B: {best_index}: {best_score}: {get_nth_combination(s, best_index)}")
+
+    return [get_nth_combination(s, best_index), best_score]
 
 
 
 
-S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}, {1, 2, 3, 4}]
+S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}]
 U = [1, 2, 3, 4, 5]
 U2 = xrange(6)
 # print(hill_full(S, 10))
 # print(hill_random(S, 10))
-S2 = generate_sets(U2, 10)
-S3 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}, {2, 3}, {1, 2, 3, 5}, {0, 1, 2}, {0, 1, 3, 4}, {5, 6}]
-print(S3)
-print(hill_full(S3, 10))
-# print(S)
+# S2 = generate_sets(U2, 10)
+# S3 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}, {2, 3}, {1, 2, 3, 5}, {0, 1, 2}, {0, 1, 2, 3, 4, 5}, {5, 6}]
+print(tabu(S, 10, 5))
+
+
+
 
 # print(load_sets())
 # S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}, {1, 2, 3, 4}, {55}]
