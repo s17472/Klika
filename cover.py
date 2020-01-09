@@ -394,4 +394,3 @@ a = benchmark_([tabu, hill_full, hill_random], [test10, test12, test14, test16],
 # benchmark(lambda: tabu(S2, k, 1000, 8), "tabu")
 # benchmark(lambda: hill_full(S2, k, 8), "hill_full")
 # benchmark(lambda: hill_random(S2, k, 2), "hill_random")
-
