@@ -9,8 +9,13 @@ import collections
 import sys
 import timeit
 from tqdm import tqdm
+import pandas as pd
+
 
 time_units = {'ms': 1, 's': 1000, 'm': 60 * 1000, 'h': 3600 * 1000}
+
+
+
 
 
 class CodeTimer:
@@ -89,7 +94,8 @@ def json_as_python_set(dct):
 
 
 class TestData:
-    def __init__(self, universe, sets, iterations, tabu_size, n_size):
+    def __init__(self, name, universe, sets, iterations, tabu_size, n_size):
+        self.name = name
         self.universe = universe
         self.sets = sets
         self.iterations = iterations
@@ -99,14 +105,23 @@ class TestData:
     @staticmethod
     def load_test_data(name):
         file = []
-        with open(name, "r+") as text_file:
+        with open(name+".txt", "r+") as text_file:
             file = text_file.read().splitlines()
         universe = [int(x) for x in file[0].split(',')]
         sets = json.loads(file[1], object_hook=json_as_python_set)
         iterations = int(file[2])
         tabu_size = int(file[3])
         n_size = int(file[4])
-        return TestData(universe, sets, iterations, tabu_size, n_size)
+        return TestData(name, universe, sets, iterations, tabu_size, n_size)
+
+    def save_to_file(self):
+        sets = json.dumps(self.sets, cls=JSONSetEncoder)
+        with open(self.name + ".txt", "w") as text_file:
+            text_file.write(','.join(map(str, self.universe))+"\n")
+            text_file.write(sets+"\n")
+            text_file.write(str(self.iterations)+"\n")
+            text_file.write(str(self.tabu_size)+"\n")
+            text_file.write(str(self.n_size)+"\n")
 
 
 def save_sets(S, name="Output.txt"):
@@ -120,15 +135,37 @@ def load_sets(name="Output.txt"):
         return json.loads(text_file.read(), object_hook=json_as_python_set)
 
 
-
-
-
 def init_test_data_files():
-    save_sets(generate_sets(U, 10), "10.txt")
-    save_sets(generate_sets(U, 12), "12.txt")
-    save_sets(generate_sets(U, 14), "14.txt")
-    save_sets(generate_sets(U, 16), "16.txt")
-    save_sets(generate_sets(U, 20), "20.txt")
+    with open("10.txt", "w") as f:
+        f.write("""0,1,2,3,4,5
+[{"_set_object": [4, 5]}, {"_set_object": [3, 4, 5]}, {"_set_object": [1, 2, 4]}, {"_set_object": [1, 2, 3]}, {"_set_object": [2]}, {"_set_object": [1, 4]}, {"_set_object": [4]}, {"_set_object": [2, 5]}, {"_set_object": [5]}, {"_set_object": [2, 3]}]
+500
+600
+3""")
+    with open("12.txt", "w") as f:
+        f.write("""0,1,2,3,4,5
+[{"_set_object": [4]}, {"_set_object": [5]}, {"_set_object": [4, 5]}, {"_set_object": [1, 4, 5]}, {"_set_object": [3, 4]}, {"_set_object": [1]}, {"_set_object": [3, 5]}, {"_set_object": [3]}, {"_set_object": [1, 2, 3]}, {"_set_object": [1, 4]}, {"_set_object": [2, 5]}, {"_set_object": [2]}]
+500
+600
+3""")
+    with open("14.txt", "w") as f:
+        f.write("""0,1,2,3,4,5
+[{"_set_object": [4]}, {"_set_object": [2, 5]}, {"_set_object": [3, 4]}, {"_set_object": [1, 2, 3]}, {"_set_object": [1, 2, 3, 4, 5]}, {"_set_object": [1, 2, 4, 5]}, {"_set_object": [2, 4]}, {"_set_object": [3, 5]}, {"_set_object": [2, 3, 4]}, {"_set_object": [1, 3]}, {"_set_object": [1, 3, 5]}, {"_set_object": [2, 3]}, {"_set_object": [1, 2]}, {"_set_object": [5]}]
+500
+600
+3""")
+    with open("16.txt", "w") as f:
+        f.write("""0,1,2,3,4,5
+[{"_set_object": [1, 4]}, {"_set_object": [2, 3, 5]}, {"_set_object": [3, 5]}, {"_set_object": [1]}, {"_set_object": [1, 3, 5]}, {"_set_object": [3, 4, 5]}, {"_set_object": [2]}, {"_set_object": [5]}, {"_set_object": [1, 3, 4, 5]}, {"_set_object": [1, 4, 5]}, {"_set_object": [2, 3, 4]}, {"_set_object": [1, 2, 4]}, {"_set_object": [1, 2, 3]}, {"_set_object": [3]}, {"_set_object": [2, 5]}, {"_set_object": [2, 3, 4, 5]}]
+500
+600
+3""")
+    with open("20.txt", "w") as f:
+        f.write("""0,1,2,3,4,5
+[{"_set_object": [2, 3]}, {"_set_object": [3, 4, 5]}, {"_set_object": [1, 5]}, {"_set_object": [3, 5]}, {"_set_object": [5]}, {"_set_object": [3, 4]}, {"_set_object": [1, 2, 3, 5]}, {"_set_object": [1, 2, 4, 5]}, {"_set_object": [2]}, {"_set_object": [2, 3, 4]}, {"_set_object": [1, 4, 5]}, {"_set_object": [1, 2, 3]}, {"_set_object": [2, 3, 4, 5]}, {"_set_object": [2, 5]}, {"_set_object": [1, 4]}, {"_set_object": [1, 2, 4]}, {"_set_object": [1, 2, 5]}, {"_set_object": [1]}, {"_set_object": [3]}, {"_set_object": [1, 2]}]
+500
+600
+3""")
 
 
 def load_test_data_files():
@@ -216,7 +253,7 @@ def brute(s):
     return [best_score, get_nth_combination(s, best_index)]
 
 
-def hill_full(s, it, n_size):
+def hill_full(s, it, tabu_size, n_size):
     start = rm.randint(0, get_combination_count(len(s)) + 1)
     start_combo = get_nth_combination(s, start)
     best_score = goal(start_combo)
@@ -234,11 +271,11 @@ def hill_full(s, it, n_size):
         start = best_n_index
         # print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
-    return [best_score, get_nth_combination(s, best_combo)]
-    # return [best_score]
+    # return [best_score, get_nth_combination(s, best_combo)]
+    return best_score
 
 
-def hill_random(s, it, n_size):
+def hill_random(s, it, tabu_size, n_size):
     n_size = n_size // 3
     start = rm.randint(0, get_combination_count(len(s)) + 1)
     start_combo = get_nth_combination(s, start)
@@ -257,8 +294,8 @@ def hill_random(s, it, n_size):
         start = best_n_index
         # print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
-    return [best_score, get_nth_combination(s, best_combo)]
-    # return [best_score]
+    # return [best_score, get_nth_combination(s, best_combo)]
+    return best_score
 
 
 def tabu(s, it, t_size, n_size):
@@ -268,7 +305,7 @@ def tabu(s, it, t_size, n_size):
     best_combo = start
     checked = [start]
 
-    for i in tqdm(range(it)):
+    for i in (range(it)):
         n = get_neighbourhood(s, start, n_size)
         n_tabu = {key: value for (key, value) in n.items() if key not in checked}
         if not n_tabu:
@@ -285,28 +322,76 @@ def tabu(s, it, t_size, n_size):
             break
         # print(f"B: {best_index}: {best_score}: {get_nth_combination(s, best_index)}")
 
-    return [best_score, get_nth_combination(s, best_combo)]
-    # return [best_score]
+    # return [best_score, get_nth_combination(s, best_combo)]
+    return best_score
 
 
-def benchmark(fun, name):
+def benchmark(fun, test_data, iterations, name):
+    score_avg = 0
     start = timeit.default_timer()
-    print(fun())
+    for i in range(iterations):
+        score_avg += fun(test_data.sets, test_data.iterations, test_data.tabu_size, test_data.n_size)
     took = (timeit.default_timer() - start) * 1000.0
-    took = took / time_units["ms"]
-    print("{:.5f}".format(took))
+    took = took / time_units["ms"] / iterations
+    print("{} {} {:.5f} {:.2f}".format(name, test_data.name, took/iterations, score_avg/iterations))
+
+
+def benchmark_(funs, data, iterations):
+    print("Nazwa rozmiar czas wynik wynik/czas")
+    res = []
+    for fun in funs:
+        for test_data in data:
+            score_avg = 0
+            start = timeit.default_timer()
+            for i in range(iterations):
+                score_avg += fun(test_data.sets, test_data.iterations, test_data.tabu_size, test_data.n_size)
+            took = (timeit.default_timer() - start) * 1000.0
+            took = took / time_units["ms"] / iterations
+            print("{} {} {:.4f} {:.2f} {:.2f}".format(fun.__name__, test_data.name, round(took/iterations, 4), round(score_avg/iterations, 2), (score_avg/iterations)/(took/iterations)))
+            res.append([fun.__name__, test_data.name, round(took/iterations, 4), round(score_avg/iterations, 2)])
+    return res
+
+
+def plot_(xd):
+    pf = pd.DataFrame(xd, columns=['name', 'size', 'time', 'score'])
+    x = pf.name.unique()
+    # sizes = pf.size.unique()
+    # y = []
+    # for s in sizes:
+    #     plt.plot(x, pf.loc[pf['size'] == '10'].time.values)
+
+    y10 = pf.loc[pf['size'] == '10'].time.values
+    y12 = pf.loc[pf['size'] == '12'].time.values
+    y14 = pf.loc[pf['size'] == '14'].time.values
+    y16 = pf.loc[pf['size'] == '16'].time.values
+    # plt.xticks(np.array(range(3)), x)
+    plt.plot(x, y10)
+    plt.plot(x, y12)
+    plt.plot(x, y14)
+    plt.plot(x, y16)
+    plt.show()
+
 
 
 S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
 U = [1, 2, 3, 4, 5]
 k = 1500
-test2 = TestData.load_test_data('10.txt')
-init_test_data_files()
-xd = load_test_data_files()
+test10 = TestData.load_test_data('10')
+test12 = TestData.load_test_data('12')
+test14 = TestData.load_test_data('14')
+test16 = TestData.load_test_data('16')
+# test20 = TestData.load_test_data('20')
+
+# benchmark(tabu, test10, 25, "Tabu")
+# benchmark(tabu, test12, 25, "Tabu")
+a = benchmark_([tabu, hill_full, hill_random], [test10, test12, test14, test16], 25)
+# plot_(a)
 
 
-test = TestData(U, xd['10'], 500, 600, 4)
-benchmark(lambda: tabu(S2, k, 1500, 8), "tabu")
-benchmark(lambda: tabu(S2, k, 1000, 8), "tabu")
-benchmark(lambda: hill_full(S2, k, 8), "hill_full")
-benchmark(lambda: hill_random(S2, k, 2), "hill_random")
+
+# benchmark(tabu, test16, 25, "Tabu")
+# benchmark(tabu, test20, 25, "Tabu")
+# benchmark(lambda: tabu(S2, k, 1000, 8), "tabu")
+# benchmark(lambda: hill_full(S2, k, 8), "hill_full")
+# benchmark(lambda: hill_random(S2, k, 2), "hill_random")
+
