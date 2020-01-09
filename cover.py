@@ -1,4 +1,5 @@
 import itertools as it
+import time
 from math import factorial
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,6 +8,43 @@ from xlwings import xrange
 import json
 import collections
 import pickle
+import sys
+from tqdm import tqdm
+import timeit
+
+time_units = {'ms': 1, 's': 1000, 'm': 60 * 1000, 'h': 3600 * 1000}
+
+
+class CodeTimer:
+    def __init__(self, name=None, silent=False, unit='ms', logger_func=None):
+        """Allows giving indented blocks their own name. Blank by default"""
+        self.name = name
+        self.silent = silent
+        self.unit = unit
+        self.logger_func = logger_func
+
+    def __enter__(self):
+        """Start measuring at the start of indent"""
+        self.start = timeit.default_timer()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+            Stop measuring at the end of indent. This will run even
+            if the indented lines raise an exception.
+        """
+        self.took = (timeit.default_timer() - self.start) * 1000.0
+        self.took = self.took / time_units.get(self.unit, time_units['ms'])
+
+        if not self.silent:
+            log_str = 'Code block{}took: {:.5f} {}'.format(
+                str(" '" + self.name + "' ") if self.name else ' ',
+                float(self.took),
+                str(self.unit))
+
+            if self.logger_func:
+                self.logger_func(log_str)
+            else:
+                print(log_str)
 
 
 #region Json
@@ -51,7 +89,6 @@ def json_as_python_set(dct):
 #endregion
 
 
-seed = 3555
 
 
 def save_sets(S):
@@ -73,36 +110,26 @@ def goal(s):
 
 def get_combinations(s):
     combos = []
-    for i in range(1, len(s) + 1):
+    for i in tqdm(range(1, len(s) + 1)):
         combos += list(it.combinations(s, i))
     return combos
 
 
 def generate_sets(U, S_size):
-    rm.seed(7)
+    rm.seed(seed)
     combination_count = get_combination_count(len(U))
-    print(combination_count)
-    combos = [rm.randrange(0, combination_count+1) for _ in xrange(S_size)]
-    print(combos)
+    if combination_count > sys.maxsize:
+        raise Exception("U len is over 63")
+        
+    # print(combination_count)
+    combos = rm.sample(xrange(1, int(combination_count+1)), S_size)
+    # print(combos)
     return [set(get_nth_combination(U, i)) for i in combos]
 
 
-def brute(s):
-    combos = get_combinations(s)
-    best_score = 0
-    best_combo = combos[0]
-
-    for i in range(len(combos)):
-        score = goal(combos[i])
-        if score > best_score:
-            best_combo = combos[i]
-            best_score = score
-
-    return best_combo
-
 
 def get_nth_combination(s, n):
-    combination_count = get_combination_count(len(s))
+    combination_count = get_combination_count(len(U2))
     if not (0 < n <= combination_count):
         n = int(n % combination_count)
         print(f"n is <= 0 or exceeds possible combinations count, n = {n}")
@@ -142,16 +169,30 @@ def get_combination_count(s_len):
     return combination_count
 
 
-def hill_full(s, x):
+def brute(s):
+    combos = get_combinations(s)
+    best_score = 0
+    best_combo = combos[0]
+
+    for i in (range(len(combos))):
+        score = goal(combos[i])
+        if score > best_score:
+            best_combo = combos[i]
+            best_score = score
+
+    return [best_score, get_nth_combination(s, best_index)]
+
+
+def hill_full(s, x, n_size):
     rm.seed(seed)
-    start = rm.randint(0, get_combination_count(len(s))+1)
+    start = rm.randint(0, len(s)+1)
     start_combo = get_nth_combination(s, start)
     best_score = goal(start_combo)
     best_combo = start
-    print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
+    # print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
-    for i in range(x):
-        n = get_neighbourhood(s, start, 2)
+    for i in (range(x)):
+        n = get_neighbourhood(s, start, n_size)
         best_n_index = max(n, key=n.get)
         best_n_score = n[best_n_index]
         if best_score > best_n_score:
@@ -159,20 +200,22 @@ def hill_full(s, x):
         best_score = best_n_score
         best_combo = best_n_index
         start = best_n_index
-        print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
+        # print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
-    return [get_nth_combination(s, best_combo), best_score]
+    return [best_score, get_nth_combination(s, best_combo)]
+    # return [best_score]
 
 
-def hill_random(s, x):
+def hill_random(s, x, n_size):
     rm.seed(seed)
-    start = rm.randint(0, get_combination_count(len(s))+1)
+    start = rm.randint(0, len(s)+1)
     start_combo = get_nth_combination(s, start)
     best_score = goal(start_combo)
     best_combo = start
+    # print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
-    for i in range(x):
-        n = get_neighbourhood(s, start, 1)
+    for i in (range(x)):
+        n = get_neighbourhood(s, start, n_size)
         best_n_index = rm.choice(list(n.keys()))
         best_n_score = n[best_n_index]
         if best_score > best_n_score:
@@ -180,56 +223,58 @@ def hill_random(s, x):
         best_score = best_n_score
         best_combo = best_n_index
         start = best_n_index
+        # print(f"{best_score}: {get_nth_combination(s, best_combo)} : {best_combo}")
 
-    return [get_nth_combination(s, best_combo), best_score]
+
+    return [best_score, get_nth_combination(s, best_combo)]
+    # return [best_score]
 
 
-def tabu(s, it, t_MAX):
+def tabu(s, it, t_MAX, n_size):
     rm.seed(seed)
-    start = rm.randint(0, get_combination_count(len(s)) + 1)
+    start = rm.randint(0, len(s)+1)
     start_combo = get_nth_combination(s, start)
     best_score = goal(start_combo)
+    best_combo = start
     checked = [start]
 
-    for i in range(it):
-        n = get_neighbourhood(s, start, 2)
+    for i in (range(it)):
+        n = get_neighbourhood(s, start, n_size)
         n_tabu = {key: value for (key, value) in n.items() if key not in checked}
         if not n_tabu:
             break
         best_n_index = max(n_tabu, key=n.get)
         checked.append(best_n_index)
         best_n_score = n_tabu[best_n_index]
-        print(f"C: {best_n_index}: {best_n_score}: {get_nth_combination(s, best_n_index)}")
+        # print(f"C: {best_n_index}: {best_n_score}: {get_nth_combination(s, best_n_index)}")
         start = best_n_index
         if best_score <= best_n_score:
             best_score = best_n_score
-            best_index = best_n_index
+            best_combo = best_n_index
         if len(checked) >= t_MAX:
             break
-        print(f"B: {best_index}: {best_score}: {get_nth_combination(s, best_index)}")
+        # print(f"B: {best_index}: {best_score}: {get_nth_combination(s, best_index)}")
 
-    return [get_nth_combination(s, best_index), best_score]
+        time.sleep(1)
+    return [best_score, get_nth_combination(s, best_combo)]
+    # return [best_score]
 
 
+def benchmark(func):
+    print(func)
 
 
 S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}]
+S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
 U = [1, 2, 3, 4, 5]
-U2 = xrange(6)
-# print(hill_full(S, 10))
-# print(hill_random(S, 10))
-# S2 = generate_sets(U2, 10)
-# S3 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}, {2, 3}, {1, 2, 3, 5}, {0, 1, 2}, {0, 1, 2, 3, 4, 5}, {5, 6}]
-print(tabu(S, 10, 5))
-
-
-
-
-# print(load_sets())
-# S = [{2, 3}, {5}, {3, 4}, {4, 5}, {1, 2, 3}, {1, 2, 3, 4}, {55}]
-# save_sets(S)
-# print(load_sets())
-# c = get_combinations(S)
-# print(hill_full(S, 10))
-
-
+seed = 441
+print(seed)
+U2 = range(10)
+k = 10
+S2 = generate_sets(U2, 500)
+with CodeTimer():
+    tabu(S2, k, 1000, 8)
+with CodeTimer():
+    tabu(S2, k, 1000, 8)
+benchmark(hill_full(S2, k, 8))
+benchmark(hill_random(S2, k, 2))
