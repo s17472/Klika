@@ -1,5 +1,7 @@
 import itertools as it
 from math import factorial
+
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import random as rm
@@ -374,7 +376,7 @@ def plot_(xd):
 
 
 S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
-U = [1, 2, 3, 4, 5]
+U = [0, 1, 2, 3, 4, 5]
 k = 1500
 test10 = TestData.load_test_data('10')
 test12 = TestData.load_test_data('12')
@@ -384,7 +386,7 @@ test16 = TestData.load_test_data('16')
 
 # benchmark(tabu, test10, 25, "Tabu")
 # benchmark(tabu, test12, 25, "Tabu")
-a = benchmark_([tabu, hill_full, hill_random], [test10, test12, test14, test16], 25)
+# a = benchmark_([tabu, hill_full, hill_random], [test10, test12, test14, test16], 25)
 # plot_(a)
 
 
@@ -394,3 +396,13 @@ a = benchmark_([tabu, hill_full, hill_random], [test10, test12, test14, test16],
 # benchmark(lambda: tabu(S2, k, 1000, 8), "tabu")
 # benchmark(lambda: hill_full(S2, k, 8), "hill_full")
 # benchmark(lambda: hill_random(S2, k, 2), "hill_random")
+
+r = tabu(S2, 1000, 1000, 4)
+plt.yticks(np.arange(len(S2)))
+plt.ylabel("Set ID")
+plt.xlabel("Universe")
+
+for i in range(len(S2)):
+    plt.scatter(list(S2[i]), list(it.repeat(i, len(S2[i]))), s=1000)
+
+plt.show()
