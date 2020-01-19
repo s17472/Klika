@@ -1,11 +1,8 @@
 import itertools as it
 from math import factorial
-
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import random as rm
-from xlwings import xrange
 import json
 import collections
 import sys
@@ -15,8 +12,6 @@ import pandas as pd
 
 
 time_units = {'ms': 1, 's': 1000, 'm': 60 * 1000, 'h': 3600 * 1000}
-
-
 
 
 
@@ -194,7 +189,7 @@ def generate_sets(U, S_size):
         raise Exception(f"combination_count is over {sys.maxsize}")
 
     # print(combination_count)
-    combos = rm.sample(xrange(1, int(combination_count + 1)), S_size)
+    combos = rm.sample(range(1, int(combination_count + 1)), S_size)
     # print(combos)
     ret = [set(get_nth_combination(U, i)) for i in combos]
     return ret
@@ -374,14 +369,36 @@ def plot_(xd):
     plt.show()
 
 
+def plot_input(input):
+    plt.title("Input data")
+    plt.yticks(np.arange(len(S2)))
+    plt.ylabel("Set ID")
+    plt.xlabel("Universe")
+    for i in range(len(input)):
+        plt.scatter(list(input[i]), list(it.repeat(i, len(input[i]))), s=1000)
+    plt.show()
+
+
+def plot_result(input, result):
+    plt.title("Result")
+    plt.yticks(np.arange(len(S2)))
+    plt.ylabel("Set ID")
+    plt.xlabel("Universe")
+    for i in range(len(input)):
+        if input[i] in result:
+            plt.scatter(list(input[i]), list(it.repeat(i, len(input[i]))), s=1000, c='green')
+        else:
+            plt.scatter(list(input[i]), list(it.repeat(i, len(input[i]))), s=1000, c='grey')
+    plt.show()
+
 
 S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
-U = [0, 1, 2, 3, 4, 5]
+U = [-1, 0, 1, 2, 3, 4, 5]
 k = 1500
-test10 = TestData.load_test_data('10')
-test12 = TestData.load_test_data('12')
-test14 = TestData.load_test_data('14')
-test16 = TestData.load_test_data('16')
+# test10 = TestData.load_test_data('10')
+# test12 = TestData.load_test_data('12')
+# test14 = TestData.load_test_data('14')
+# test16 = TestData.load_test_data('16')
 # test20 = TestData.load_test_data('20')
 
 # benchmark(tabu, test10, 25, "Tabu")
@@ -389,20 +406,16 @@ test16 = TestData.load_test_data('16')
 # a = benchmark_([tabu, hill_full, hill_random], [test10, test12, test14, test16], 25)
 # plot_(a)
 
-
-
 # benchmark(tabu, test16, 25, "Tabu")
 # benchmark(tabu, test20, 25, "Tabu")
 # benchmark(lambda: tabu(S2, k, 1000, 8), "tabu")
 # benchmark(lambda: hill_full(S2, k, 8), "hill_full")
 # benchmark(lambda: hill_random(S2, k, 2), "hill_random")
 
+
+R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
 r = tabu(S2, 1000, 1000, 4)
-plt.yticks(np.arange(len(S2)))
-plt.ylabel("Set ID")
-plt.xlabel("Universe")
 
-for i in range(len(S2)):
-    plt.scatter(list(S2[i]), list(it.repeat(i, len(S2[i]))), s=1000)
 
-plt.show()
+plot_input(S2)
+plot_result(S2, R2)
