@@ -10,9 +10,7 @@ import timeit
 from tqdm import tqdm
 import pandas as pd
 
-
 time_units = {'ms': 1, 's': 1000, 'm': 60 * 1000, 'h': 3600 * 1000}
-
 
 
 class CodeTimer:
@@ -87,6 +85,8 @@ def json_as_python_set(dct):
     if '_set_object' in dct:
         return set(dct['_set_object'])
     return dct
+
+
 # endregion
 
 
@@ -102,7 +102,7 @@ class TestData:
     @staticmethod
     def load_test_data(name):
         file = []
-        with open(name+".txt", "r+") as text_file:
+        with open(name + ".txt", "r+") as text_file:
             file = text_file.read().splitlines()
         universe = [int(x) for x in file[0].split(',')]
         sets = json.loads(file[1], object_hook=json_as_python_set)
@@ -114,11 +114,11 @@ class TestData:
     def save_to_file(self):
         sets = json.dumps(self.sets, cls=JSONSetEncoder)
         with open(self.name + ".txt", "w") as text_file:
-            text_file.write(','.join(map(str, self.universe))+"\n")
-            text_file.write(sets+"\n")
-            text_file.write(str(self.iterations)+"\n")
-            text_file.write(str(self.tabu_size)+"\n")
-            text_file.write(str(self.n_size)+"\n")
+            text_file.write(','.join(map(str, self.universe)) + "\n")
+            text_file.write(sets + "\n")
+            text_file.write(str(self.iterations) + "\n")
+            text_file.write(str(self.tabu_size) + "\n")
+            text_file.write(str(self.n_size) + "\n")
 
 
 def save_sets(S, name="Output.txt"):
@@ -330,7 +330,7 @@ def benchmark(fun, test_data, iterations, name):
         score_avg += fun(test_data.sets, test_data.iterations, test_data.tabu_size, test_data.n_size)
     took = (timeit.default_timer() - start) * 1000.0
     took = took / time_units["ms"] / iterations
-    print("{} {} {:.5f} {:.2f}".format(name, test_data.name, took/iterations, score_avg/iterations))
+    print("{} {} {:.5f} {:.2f}".format(name, test_data.name, took / iterations, score_avg / iterations))
 
 
 def benchmark_(funs, data, iterations):
@@ -344,8 +344,10 @@ def benchmark_(funs, data, iterations):
                 score_avg += fun(test_data.sets, test_data.iterations, test_data.tabu_size, test_data.n_size)
             took = (timeit.default_timer() - start) * 1000.0
             took = took / time_units["ms"] / iterations
-            print("{} {} {:.4f} {:.2f} {:.2f}".format(fun.__name__, test_data.name, round(took/iterations, 4), round(score_avg/iterations, 2), (score_avg/iterations)/(took/iterations)))
-            res.append([fun.__name__, test_data.name, round(took/iterations, 4), round(score_avg/iterations, 2)])
+            print("{} {} {:.4f} {:.2f} {:.2f}".format(fun.__name__, test_data.name, round(took / iterations, 4),
+                                                      round(score_avg / iterations, 2),
+                                                      (score_avg / iterations) / (took / iterations)))
+            res.append([fun.__name__, test_data.name, round(took / iterations, 4), round(score_avg / iterations, 2)])
     return res
 
 
@@ -392,6 +394,39 @@ def plot_result(input, result):
     plt.show()
 
 
+def default_temperature(T, k):
+    return T * abs(k)
+
+
+def fast_temperature(T, k):
+    import math
+    return T / abs(math.log2(k))
+
+
+def boltz_temperature(T, k):
+    return T / abs(k ** 0.5)
+
+
+def simmulated_annealing(params):
+    sets = params['sets']
+    iterations = params['iterations']
+    n_size = params['n_size']
+    T = params['T']
+    K = params['K']
+    temp_func = params['temp_func']
+
+    temperatures =[]
+    current_score = []
+    start = rm.randint(0, get_combination_count(len(s)) + 1)
+    start_combo = get_nth_combination(s, start)
+    best_score = goal(start_combo)
+    best_combo = start
+    checked = [start]
+
+    for i in range(iterations):
+        n = get_neighbourhood()
+
+
 S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
 U = [-1, 0, 1, 2, 3, 4, 5]
 k = 1500
@@ -412,10 +447,10 @@ k = 1500
 # benchmark(lambda: hill_full(S2, k, 8), "hill_full")
 # benchmark(lambda: hill_random(S2, k, 2), "hill_random")
 
+params = {"sets": S2, "iterations": 60, "n_size": 2, "T": 2000, "K": 0.85, "temp_func": boltz_temperature}
 
 R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
 r = tabu(S2, 1000, 1000, 4)
-
 
 plot_input(S2)
 plot_result(S2, R2)
