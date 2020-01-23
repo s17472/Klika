@@ -247,7 +247,41 @@ def brute(s):
             best_combo = combos[i]
             best_score = score
 
-    return [best_score, get_nth_combination(s, best_index)]
+    return [best_score, best_combo]
+
+
+def simulated_annealing(params):
+    sets = params['sets']
+    iterations = params['iterations']
+    n_size = params['n_size']
+    T = params['T']
+    K = params['K']
+    temp_func = params['temp_func']
+
+    temperatures = []
+    current_score = []
+    start = rm.randint(0, get_combination_count(len(sets)) + 1)
+    start_combo = get_nth_combination(sets, start)
+    best_score = goal(start_combo)
+    best_combo = start
+
+    for i in range(iterations):
+        n = get_neighbourhood(sets, start, n_size)
+        best_n_index = rm.choice(list(n.keys()))
+        best_n_score = n[best_n_index]
+
+        rn = np.random.rand()
+        acceptance_probability = 1 / (np.exp(best_n_score - best_score) / T)
+
+        if best_n_score >= best_score or rn >= acceptance_probability:
+            best_score = best_n_score
+            best_combo = best_n_index
+
+        temperatures.append(T)
+        current_score.append(best_n_score)
+        T = temp_func(T, k)
+
+    return best_score, get_nth_combination(sets, best_combo)
 
 
 def hill_full(s, it, tabu_size, n_size):
@@ -407,28 +441,11 @@ def boltz_temperature(T, k):
     return T / abs(k ** 0.5)
 
 
-def simmulated_annealing(params):
-    sets = params['sets']
-    iterations = params['iterations']
-    n_size = params['n_size']
-    T = params['T']
-    K = params['K']
-    temp_func = params['temp_func']
-
-    temperatures =[]
-    current_score = []
-    start = rm.randint(0, get_combination_count(len(s)) + 1)
-    start_combo = get_nth_combination(s, start)
-    best_score = goal(start_combo)
-    best_combo = start
-    checked = [start]
-
-    for i in range(iterations):
-        n = get_neighbourhood()
 
 
-S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
-U = [-1, 0, 1, 2, 3, 4, 5]
+
+S2 = [{0}, {0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
+U = [0, 1, 2, 3, 4, 5]
 k = 1500
 # test10 = TestData.load_test_data('10')
 # test12 = TestData.load_test_data('12')
@@ -447,10 +464,10 @@ k = 1500
 # benchmark(lambda: hill_full(S2, k, 8), "hill_full")
 # benchmark(lambda: hill_random(S2, k, 2), "hill_random")
 
-params = {"sets": S2, "iterations": 60, "n_size": 2, "T": 2000, "K": 0.85, "temp_func": boltz_temperature}
+params = {"sets": S2, "iterations": 60, "n_size": 2, "T": 1000, "K": 0.90, "temp_func": default_temperature}
+print(simulated_annealing(params))
 
 R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
-r = tabu(S2, 1000, 1000, 4)
-
-plot_input(S2)
-plot_result(S2, R2)
+# r = tabu(S2, 1000, 1000, 4)
+# plot_input(S2)
+# plot_result(S2, R2)
