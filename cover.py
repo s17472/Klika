@@ -250,40 +250,6 @@ def brute(s):
     return [best_score, best_combo]
 
 
-def simulated_annealing(params):
-    sets = params['sets']
-    iterations = params['iterations']
-    n_size = params['n_size']
-    T = params['T']
-    K = params['K']
-    temp_func = params['temp_func']
-
-    temperatures = []
-    current_score = []
-    start = rm.randint(0, get_combination_count(len(sets)) + 1)
-    start_combo = get_nth_combination(sets, start)
-    best_score = goal(start_combo)
-    best_combo = start
-
-    for i in range(iterations):
-        n = get_neighbourhood(sets, start, n_size)
-        best_n_index = rm.choice(list(n.keys()))
-        best_n_score = n[best_n_index]
-
-        rn = np.random.rand()
-        acceptance_probability = 1 / (np.exp(best_n_score - best_score) / T)
-
-        if best_n_score >= best_score or rn >= acceptance_probability:
-            best_score = best_n_score
-            best_combo = best_n_index
-
-        temperatures.append(T)
-        current_score.append(best_n_score)
-        T = temp_func(T, k)
-
-    return best_score, get_nth_combination(sets, best_combo)
-
-
 def hill_full(s, it, tabu_size, n_size):
     start = rm.randint(0, get_combination_count(len(s)) + 1)
     start_combo = get_nth_combination(s, start)
@@ -367,10 +333,10 @@ def benchmark(fun, test_data, iterations, name):
     print("{} {} {:.5f} {:.2f}".format(name, test_data.name, took / iterations, score_avg / iterations))
 
 
-def benchmark_(funs, data, iterations):
+def benchmark_(func, data, iterations):
     print("Nazwa rozmiar czas wynik wynik/czas")
     res = []
-    for fun in funs:
+    for fun in func:
         for test_data in data:
             score_avg = 0
             start = timeit.default_timer()
@@ -438,10 +404,101 @@ def fast_temperature(T, k):
 
 
 def boltz_temperature(T, k):
-    return T / abs(k ** 0.5)
+    return T / abs(k ** 0.95)
+
+
+def temperature(T, k):
+    return T / k
+
+def simulated_annealing(params):
+    sets = params['sets']
+    iterations = params['iterations']
+    n_size = params['n_size']
+    T = params['T']
+    K = params['K']
+    temp_func = params['temp_func']
+
+    temperatures = []
+    current_score = []
+    start = rm.randint(0, get_combination_count(len(sets)) + 1)
+    start_combo = get_nth_combination(sets, start)
+    best_score = goal(start_combo)
+    best_combo = start
+
+    for i in range(iterations):
+        n = get_neighbourhood(sets, start, n_size)
+        best_n_index = rm.choice(list(n.keys()))
+        best_n_score = n[best_n_index]
+
+        rn = np.random.uniform(0.0, 1.0, 1)
+        acceptance_probability = 1 / (np.exp(best_n_score - best_score) / T)
+
+        if best_n_score >= best_score or rn >= acceptance_probability:
+            best_score = best_n_score
+            best_combo = best_n_index
+
+        temperatures.append(T)
+        current_score.append(best_n_score)
+        T = temp_func(T, K)
+
+    # return best_score, get_nth_combination(sets, best_combo)
+    return best_score
+
+
+def simulated_annealing2(params):
+    sets = params['sets']
+    iterations = params['iterations']
+    n_size = params['n_size']
+    T = params['T']
+    K = params['K']
+    temp_func = params['temp_func']
+
+    temperatures = []
+    current_score = {}
+    start = rm.randint(0, get_combination_count(len(sets)) + 1)
+    start_combo = get_nth_combination(sets, start)
+    best_score = goal(start_combo)
+    best_combo = start
+
+    for i in range(iterations):
+        n = get_neighbourhood(sets, start, n_size)
+        best_n_index = rm.choice(list(n.keys()))
+        best_n_score = n[best_n_index]
+        if best_n_index > best_score:
+            best_score = best_n_score
+            best_combo = best_n_index
+        else:
+            f_t_k = best_n_score
+            f_s_k_1 = best_score
+
+            u = np.random.uniform(0.0, 1.0, 1)
+            if u < np.exp(-abs(f_t_k - f_s_k_1) / temp_func(T, i+1)):
+                best_score = best_n_score
+                best_combo = best_n_index
+
+        temperatures.append(temp_func(T, i+1))
+        current_score[best_n_index] = best_n_score
+
+    # return best_score, get_nth_combination(sets, best_combo)
+    return current_score[max(current_score, key=current_score.get)]
 
 
 
+def benchmark_simulated_annealing(fun, params_set, b_it):
+    print("Nazwa rozmiar czas wynik wynik/czas")
+    res = []
+    for params in params_set:
+        score_avg = 0
+        start = timeit.default_timer()
+        for i in range(b_it):
+            score_avg += fun(params)
+        took = (timeit.default_timer() - start) * 1000.0
+        took = took / time_units["ms"] / b_it
+        print("{} {} {:.4f} {:.2f} {:.2f}".format(fun.__name__, len(params["sets"]), round(took / b_it, 4),
+                                                  round(score_avg / b_it, 2),
+                                                  (score_avg / b_it) / (took / b_it)))
+        res.append([fun.__name__, len(params["sets"]), round(took / b_it, 4), round(score_avg / b_it, 2)])
+    return res
 
 
 S2 = [{0}, {0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
@@ -464,10 +521,20 @@ k = 1500
 # benchmark(lambda: hill_full(S2, k, 8), "hill_full")
 # benchmark(lambda: hill_random(S2, k, 2), "hill_random")
 
-params = {"sets": S2, "iterations": 60, "n_size": 2, "T": 1000, "K": 0.90, "temp_func": default_temperature}
-print(simulated_annealing(params))
+test = TestData.load_test_data('14')
+params1 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 10000000, "K": 0.85, "temp_func": temperature}
+params2 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 500000, "K": 0.85, "temp_func": temperature}
+params5 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 2000, "K": 0.85, "temp_func": temperature}
+params3 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 1000, "K": 0.85, "temp_func": default_temperature}
+params4 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 500, "K": 0.85, "temp_func": default_temperature}
+params6 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 100, "K": 0.85, "temp_func": default_temperature}
+params_arr = [params1, params2, params5]
+params_arr2 = [params3, params4, params6]
 
-R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
+benchmark_simulated_annealing(simulated_annealing2, params_arr, 100)
+benchmark_simulated_annealing(simulated_annealing, params_arr2, 100)
+
+# R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
 # r = tabu(S2, 1000, 1000, 4)
 # plot_input(S2)
 # plot_result(S2, R2)
