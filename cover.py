@@ -10,7 +10,9 @@ import timeit
 from tqdm import tqdm
 import pandas as pd
 
+
 time_units = {'ms': 1, 's': 1000, 'm': 60 * 1000, 'h': 3600 * 1000}
+
 
 
 class CodeTimer:
@@ -85,8 +87,6 @@ def json_as_python_set(dct):
     if '_set_object' in dct:
         return set(dct['_set_object'])
     return dct
-
-
 # endregion
 
 
@@ -102,7 +102,7 @@ class TestData:
     @staticmethod
     def load_test_data(name):
         file = []
-        with open(name + ".txt", "r+") as text_file:
+        with open(name+".txt", "r+") as text_file:
             file = text_file.read().splitlines()
         universe = [int(x) for x in file[0].split(',')]
         sets = json.loads(file[1], object_hook=json_as_python_set)
@@ -114,11 +114,11 @@ class TestData:
     def save_to_file(self):
         sets = json.dumps(self.sets, cls=JSONSetEncoder)
         with open(self.name + ".txt", "w") as text_file:
-            text_file.write(','.join(map(str, self.universe)) + "\n")
-            text_file.write(sets + "\n")
-            text_file.write(str(self.iterations) + "\n")
-            text_file.write(str(self.tabu_size) + "\n")
-            text_file.write(str(self.n_size) + "\n")
+            text_file.write(','.join(map(str, self.universe))+"\n")
+            text_file.write(sets+"\n")
+            text_file.write(str(self.iterations)+"\n")
+            text_file.write(str(self.tabu_size)+"\n")
+            text_file.write(str(self.n_size)+"\n")
 
 
 def save_sets(S, name="Output.txt"):
@@ -247,7 +247,7 @@ def brute(s):
             best_combo = combos[i]
             best_score = score
 
-    return [best_score, best_combo]
+    return [best_score, get_nth_combination(s, best_index)]
 
 
 def hill_full(s, it, tabu_size, n_size):
@@ -330,13 +330,13 @@ def benchmark(fun, test_data, iterations, name):
         score_avg += fun(test_data.sets, test_data.iterations, test_data.tabu_size, test_data.n_size)
     took = (timeit.default_timer() - start) * 1000.0
     took = took / time_units["ms"] / iterations
-    print("{} {} {:.5f} {:.2f}".format(name, test_data.name, took / iterations, score_avg / iterations))
+    print("{} {} {:.5f} {:.2f}".format(name, test_data.name, took/iterations, score_avg/iterations))
 
 
-def benchmark_(func, data, iterations):
+def benchmark_(funs, data, iterations):
     print("Nazwa rozmiar czas wynik wynik/czas")
     res = []
-    for fun in func:
+    for fun in funs:
         for test_data in data:
             score_avg = 0
             start = timeit.default_timer()
@@ -344,10 +344,8 @@ def benchmark_(func, data, iterations):
                 score_avg += fun(test_data.sets, test_data.iterations, test_data.tabu_size, test_data.n_size)
             took = (timeit.default_timer() - start) * 1000.0
             took = took / time_units["ms"] / iterations
-            print("{} {} {:.4f} {:.2f} {:.2f}".format(fun.__name__, test_data.name, round(took / iterations, 4),
-                                                      round(score_avg / iterations, 2),
-                                                      (score_avg / iterations) / (took / iterations)))
-            res.append([fun.__name__, test_data.name, round(took / iterations, 4), round(score_avg / iterations, 2)])
+            print("{} {} {:.4f} {:.2f} {:.2f}".format(fun.__name__, test_data.name, round(took/iterations, 4), round(score_avg/iterations, 2), (score_avg/iterations)/(took/iterations)))
+            res.append([fun.__name__, test_data.name, round(took/iterations, 4), round(score_avg/iterations, 2)])
     return res
 
 
@@ -381,6 +379,10 @@ def plot_input(input):
     plt.show()
 
 
+def generate_random_solution(sets):
+    return get_nth_combination(rm.randint(0, get_combination_count(len(sets)) + 1))
+
+
 def plot_result(input, result):
     plt.title("Result")
     plt.yticks(np.arange(len(S2)))
@@ -394,115 +396,55 @@ def plot_result(input, result):
     plt.show()
 
 
-def default_temperature(T, k):
-    return T * abs(k)
+def initialize_population(sets, size):
+    population = []
+    for i in range(size):
+        population.append(generate_random_solution(sets))
+    return population
 
 
-def fast_temperature(T, k):
-    import math
-    return T / abs(math.log2(k))
+def fitness(solution):
+    return 1000.0 / (1.0 + goal(solution))
 
 
-def boltz_temperature(T, k):
-    return T / abs(k ** 0.95)
+def selection(population):
+    first = rm.choice(population)
+    second = rm.choice(population)
+    return first if fitness(first) > fitness(second) else second
 
 
-def temperature(T, k):
-    return T / k
+def crossover(parent_a, parent_b):
+    shorter = min(len(parent_a), len(parent_b))
+    cross_point = np.random.uniform(0, shorter, 1)
 
-def simulated_annealing(params):
-    sets = params['sets']
-    iterations = params['iterations']
-    n_size = params['n_size']
-    T = params['T']
-    K = params['K']
-    temp_func = params['temp_func']
+    child_a = parent_a[:cross_point:] + parent_b[cross_point::]
+    child_b = parent_b[:cross_point:] + parent_a[cross_point::]
 
-    temperatures = []
-    current_score = []
-    start = rm.randint(0, get_combination_count(len(sets)) + 1)
-    start_combo = get_nth_combination(sets, start)
-    best_score = goal(start_combo)
-    best_combo = start
-
-    for i in range(iterations):
-        n = get_neighbourhood(sets, start, n_size)
-        best_n_index = rm.choice(list(n.keys()))
-        best_n_score = n[best_n_index]
-
-        rn = np.random.uniform(0.0, 1.0, 1)
-        acceptance_probability = 1 / (np.exp(best_n_score - best_score) / T)
-
-        if best_n_score >= best_score or rn >= acceptance_probability:
-            best_score = best_n_score
-            best_combo = best_n_index
-
-        temperatures.append(T)
-        current_score.append(best_n_score)
-        T = temp_func(T, K)
-
-    # return best_score, get_nth_combination(sets, best_combo)
-    return best_score
+    return child_a, child_b
 
 
-def simulated_annealing2(params):
-    sets = params['sets']
-    iterations = params['iterations']
-    n_size = params['n_size']
-    T = params['T']
-    K = params['K']
-    temp_func = params['temp_func']
+def mutation(sets, specimen):
+    avalable = [x for x in sets if x not in specimen]
+    if avalable:
+        return specimen
 
-    temperatures = []
-    current_score = {}
-    start = rm.randint(0, get_combination_count(len(sets)) + 1)
-    start_combo = get_nth_combination(sets, start)
-    best_score = goal(start_combo)
-    best_combo = start
+    new = rm.choice(avalable)
+    old_index = rm.randint(0, len(specimen))
+    specimen.pop(old_index)
+    specimen.append(new)
+    return specimen
 
-    for i in range(iterations):
-        n = get_neighbourhood(sets, start, n_size)
-        best_n_index = rm.choice(list(n.keys()))
-        best_n_score = n[best_n_index]
-        if best_n_index > best_score:
-            best_score = best_n_score
-            best_combo = best_n_index
-        else:
-            f_t_k = best_n_score
-            f_s_k_1 = best_score
 
-            u = np.random.uniform(0.0, 1.0, 1)
-            if u < np.exp(-abs(f_t_k - f_s_k_1) / temp_func(T, i+1)):
-                best_score = best_n_score
-                best_combo = best_n_index
+def termination(population, iteration):
+    return len(population) == iteration
 
-        temperatures.append(temp_func(T, i+1))
-        current_score[best_n_index] = best_n_score
 
-    # return best_score, get_nth_combination(sets, best_combo)
-    return current_score[max(current_score, key=current_score.get)]
+def generic(initial_population, fitness_func, selection_func, crossover_func, mutation_func, termination_func, crossover_probability = 0.9, mutation_probability = 0.1):
 
 
 
-def benchmark_simulated_annealing(fun, params_set, b_it):
-    print("Nazwa rozmiar czas wynik wynik/czas")
-    res = []
-    for params in params_set:
-        score_avg = 0
-        start = timeit.default_timer()
-        for i in range(b_it):
-            score_avg += fun(params)
-        took = (timeit.default_timer() - start) * 1000.0
-        took = took / time_units["ms"] / b_it
-        print("{} {} {:.4f} {:.2f} {:.2f}".format(fun.__name__, len(params["sets"]), round(took / b_it, 4),
-                                                  round(score_avg / b_it, 2),
-                                                  (score_avg / b_it) / (took / b_it)))
-        res.append([fun.__name__, len(params["sets"]), round(took / b_it, 4), round(score_avg / b_it, 2)])
-    return res
-
-
-S2 = [{0}, {0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
-U = [0, 1, 2, 3, 4, 5]
+S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
+U = [-1, 0, 1, 2, 3, 4, 5]
 k = 1500
 # test10 = TestData.load_test_data('10')
 # test12 = TestData.load_test_data('12')
@@ -521,20 +463,10 @@ k = 1500
 # benchmark(lambda: hill_full(S2, k, 8), "hill_full")
 # benchmark(lambda: hill_random(S2, k, 2), "hill_random")
 
-test = TestData.load_test_data('14')
-params1 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 10000000, "K": 0.85, "temp_func": temperature}
-params2 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 500000, "K": 0.85, "temp_func": temperature}
-params5 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 2000, "K": 0.85, "temp_func": temperature}
-params3 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 1000, "K": 0.85, "temp_func": default_temperature}
-params4 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 500, "K": 0.85, "temp_func": default_temperature}
-params6 = {"sets": test.sets, "iterations": 200, "n_size": 4, "T": 100, "K": 0.85, "temp_func": default_temperature}
-params_arr = [params1, params2, params5]
-params_arr2 = [params3, params4, params6]
 
-benchmark_simulated_annealing(simulated_annealing2, params_arr, 100)
-benchmark_simulated_annealing(simulated_annealing, params_arr2, 100)
+R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
+r = tabu(S2, 1000, 1000, 4)
 
-# R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
-# r = tabu(S2, 1000, 1000, 4)
-# plot_input(S2)
-# plot_result(S2, R2)
+
+plot_input(S2)
+plot_result(S2, R2)
