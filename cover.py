@@ -380,7 +380,7 @@ def plot_input(input):
 
 
 def generate_random_solution(sets):
-    return get_nth_combination(rm.randint(0, get_combination_count(len(sets)) + 1))
+    return get_nth_combination(sets, rm.randint(0, get_combination_count(len(sets)) + 1))
 
 
 def plot_result(input, result):
@@ -415,10 +415,9 @@ def selection(population):
 
 def crossover(parent_a, parent_b):
     shorter = min(len(parent_a), len(parent_b))
-    cross_point = np.random.uniform(0, shorter, 1)
-
-    child_a = parent_a[:cross_point:] + parent_b[cross_point::]
-    child_b = parent_b[:cross_point:] + parent_a[cross_point::]
+    cross_point = round(rm.uniform(0, shorter))
+    child_a = [parent_a[:cross_point:], parent_b[cross_point::]]
+    child_b = [parent_b[:cross_point:], parent_a[cross_point::]]
 
     return child_a, child_b
 
@@ -436,17 +435,53 @@ def mutation(sets, specimen):
 
 
 def termination(population, iteration):
-    return len(population) == iteration
+    return len(population) != iteration
 
 
-def generic(initial_population, fitness_func, selection_func, crossover_func, mutation_func, termination_func, crossover_probability = 0.9, mutation_probability = 0.1):
+def generic(sets, initial_population, fitness_func, selection_func, crossover_func, mutation_func, termination_func, crossover_probability = 0.9, mutation_probability = 0.1):
+    population = initial_population
+
+    i = 0
+    while termination_func(population, i):
+        fits = []
+        parents = []
+        children = []
+        for specimen in population:
+            fits.append(fitness_func(specimen))
+
+        for s in range(len(initial_population)):
+            parents.append(selection_func(population))
+
+        it = 0
+        while it < len(initial_population):
+            cross = rm.uniform(0, 1) < crossover_probability
+            if cross:
+                a, b = crossover_func(parents[it], parents[it+1])
+                children.append(a)
+                children.append(b)
+            else:
+                children.append(parents[i])
+                children.append(parents[i+1])
+            it += 2
+
+        it = 0
+        while it < len(initial_population):
+            mutate = rm.uniform(0, 1) < mutation_probability
+            if mutate:
+                children[it] = mutation_func(sets, children[i])
+            it += 2
+
+        population = children
+        i += 1
+
+    return max(population, key=fitness_func)
 
 
 
 S2 = [{0, 3, 5}, {0, 1, 4}, {1, 4, 5}, {1, 2}, {0, 3}]
 U = [-1, 0, 1, 2, 3, 4, 5]
 k = 1500
-# test10 = TestData.load_test_data('10')
+test10 = TestData.load_test_data('10')
 # test12 = TestData.load_test_data('12')
 # test14 = TestData.load_test_data('14')
 # test16 = TestData.load_test_data('16')
@@ -465,8 +500,13 @@ k = 1500
 
 
 R2 = [{0, 3, 5}, {0, 1, 4}, {1, 2}]
-r = tabu(S2, 1000, 1000, 4)
+# r = tabu(S2, 1000, 1000, 4)
 
+init_pop = initialize_population(test10.sets, 10)
+
+generic(S2, init_pop, fitness, selection, crossover, mutation, termination,
+        crossover_probability=0.9,
+        mutation_probability=0.1)
 
 plot_input(S2)
 plot_result(S2, R2)
